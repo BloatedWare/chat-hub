@@ -31,7 +31,7 @@ void init_client_array(struct Client_array* arr);
 void add_client(struct Client_array *arr, struct Client new_client);
 int remove_client(struct Client_array *arr, struct Client c);
 int get_port(const char* str);
-void service(struct Client c);
+void service(struct Client *c);
 void global_msg(const char* msg, struct Client *c);
 void* client_routine(void* args);
 
@@ -103,7 +103,7 @@ int main(int argc, char **argv) {
         add_client(&arr, new_client);
         pthread_mutex_unlock(&arr_lock);
 
-        service(arr.clients[arr.size-1]);
+        service(&arr.clients[arr.size-1]);
     }
 
    
@@ -138,6 +138,7 @@ void init_client_array(struct Client_array* arr) {
         exit(1);
     }
     arr->capacity = INITIAL_CLIENT_ALLOC;
+    arr->size = 0;
 }
 
 void add_client(struct Client_array *arr, struct Client new_client) {
@@ -167,7 +168,7 @@ void add_client(struct Client_array *arr, struct Client new_client) {
 int remove_client(struct Client_array *arr, struct Client c) {
 
     int index;
-    for (int index = 0; index < arr->size; index++) {
+    for (index = 0; index < arr->size; index++) {
         if (arr->clients[index].sd == c.sd) {
             break;
         }
@@ -183,10 +184,9 @@ int remove_client(struct Client_array *arr, struct Client c) {
     return 1;
 }
 
-void service(struct Client c) {
+void service(struct Client *c) {
     pthread_t client_thread;
-    pthread_create(&client_thread, NULL, &client_routine, (void*)&c);
-
+    pthread_create(&client_thread, NULL, &client_routine, (void*)c);
 }
 
 void* client_routine(void* args) {
@@ -198,7 +198,7 @@ void* client_routine(void* args) {
 
         bytes_read = recv(c->sd, buffer, RECV_BUFF_SZ-1, 0);
         if (bytes_read == -1) {
-            perror("recv");
+            perror("client_routine:recv");
             exit(1);
         } 
         buffer[bytes_read] = '\0';// i assume data sent isn't null terminated
@@ -240,7 +240,7 @@ void global_msg(const char* msg, struct Client *sender) {
     
     snprintf(final_msg, msg_len+1, "%s: %s",sender->pseudo_name, msg); 
 
-    printf("final msg= %s\n", final_msg);
+    printf("%s\n", final_msg);
 
     for (int i = 0; i < arr.size; i++) {
         if (arr.clients[i].sd != sender->sd) {
@@ -248,6 +248,7 @@ void global_msg(const char* msg, struct Client *sender) {
         }
     }
 
+    
     free(final_msg);
 }
 
