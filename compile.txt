@@ -1,0 +1,5 @@
+mkdir -p bin/
+gcc src/server.c -o bin/server && gcc src/client.c -o bin/client
+
+bin/server <port-number> [optional:ip address]
+bin/client <port-number the server is open on> <ip-address (interface) the server is listening on>
